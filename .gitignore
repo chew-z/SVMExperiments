@@ -1,0 +1,10 @@
+.DS_Store
+go.sum
+.env.yaml
+.env
+*.json
+*.out
+*.model
+*.test
+*.train
+bin/**
