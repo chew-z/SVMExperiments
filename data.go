@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/firestore"
+	libSvm "github.com/ewalker544/libsvm-go"
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/markcheno/go-talib"
 )
@@ -41,6 +42,7 @@ var (
 	firestoreClient *firestore.Client
 	kd              [100]Candle
 	location, _     = time.LoadLocation(city)
+	price           [100]int
 	indicator0      [100]int
 	indicator1      [100]int
 	indicator2      [100]int
@@ -57,9 +59,59 @@ var (
 	userAgent       = randUserAgent()
 )
 
+/*
+ */
+func CreateModel(asset string) {
+	dataPath := fmt.Sprintf("%s.train", asset)
+	modelPath := fmt.Sprintf("%s.model", asset)
+	param := libSvm.NewParameter()  // Create a parameter object with default values
+	param.KernelType = libSvm.POLY  // Use the polynomial kernel
+	model := libSvm.NewModel(param) // Create a model object from the parameter attributes
+
+	// Create a problem specification from the training data and parameter attributes
+	problem, _ := libSvm.NewProblem(dataPath, param)
+	model.Train(problem)  // Train the model from the problem specification
+	model.Dump(modelPath) // Dump the model into a user-specified file
+
+}
+
+/*
+ */
+func SaveTrainData(asset string) {
+	dataPath := fmt.Sprintf("%s.train", asset)
+	f, err := os.Create(dataPath)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	for i := range planet0 {
+		sig := Signum(indicator3[i] - indicator2[i])
+		fmt.Fprintf(f, "%d %d:1 %d:1 %d:1 %d:1 %d:1 %d:1 %d:1 %d:1 %d:1 %d:1 %d:1\n", sig, planet0[i], planet1[i], planet2[i], position0[i], position1[i], position2[i], price[i], indicator0[i], indicator1[i], indicator2[i], indicator3[i])
+	}
+	f.Close()
+
+}
+
 /*CreateData - create sample data.
  */
-func CreateData() {
+func CreatePlanetData(timeseries []float64) {
+	moon := IlluminationTimeseries("Moon", timeseries)
+	mercury := IlluminationTimeseries("Mercury", timeseries)
+	venus := IlluminationTimeseries("Venus", timeseries)
+	moonPos := PositionTimeseries("Moon", timeseries)
+	mercuryPos := PositionTimeseries("Mercury", timeseries)
+	venusPos := PositionTimeseries("Venus", timeseries)
+	for i, _ := range timeseries {
+		planet0[i] = Scale(moon[i])
+		planet1[i] = Scale(mercury[i])
+		planet2[i] = Scale(venus[i])
+		position0[i] = Scale(Normalize(moonPos[i], 0.0, 360.0))
+		position1[i] = Scale(Normalize(mercuryPos[i], 0.0, 360.0))
+		position2[i] = Scale(Normalize(venusPos[i], 0.0, 360.00))
+	}
+}
+
+func CreateQuotesData(asset string) []float64 {
 	var high, low [100]float64
 	var open, clos [100]float64
 	var timeseries []float64
@@ -89,27 +141,18 @@ func CreateData() {
 		ma0 := talib.Ma(typical[:], 10, talib.SMA)
 		dx := talib.Dx(high[:], low[:], clos[:], 10)
 		aroonDown, aroonUp := talib.Aroon(high[:], low[:], 10)
-		moon := IlluminationTimeseries("Moon", timeseries)
-		mercury := IlluminationTimeseries("Mercury", timeseries)
-		venus := IlluminationTimeseries("Venus", timeseries)
-		moonPos := PositionTimeseries("Moon", timeseries)
-		mercuryPos := PositionTimeseries("Mercury", timeseries)
-		venusPos := PositionTimeseries("Venus", timeseries)
 		min, max := MinMax(ma0[10:])
 		for i, _ := range high {
-			planet0[i] = Scale(moon[i])
-			planet1[i] = Scale(mercury[i])
-			planet2[i] = Scale(venus[i])
-			position0[i] = Scale(Normalize(moonPos[i], 0.0, 360.0))
-			position1[i] = Scale(Normalize(mercuryPos[i], 0.0, 360.0))
-			position2[i] = Scale(Normalize(venusPos[i], 0.0, 360.00))
+			price[i] = Scale(Normalize(typical[i], min, max))
 			indicator0[i] = Scale(Normalize(typical[i], min, max))
 			indicator1[i] = Scale((Normalize(dx[i], 0.0, 100.0)))
 			indicator2[i] = Scale(Normalize(aroonDown[i], 0.0, 100.0))
 			indicator3[i] = Scale(Normalize(aroonUp[i], 0.0, 100.0))
 		}
+		return timeseries
 	} else {
 		log.Println("Something went wrong")
+		return nil
 	}
 }
 
