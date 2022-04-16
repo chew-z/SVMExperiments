@@ -25,7 +25,8 @@ func main() {
 		return
 	}
 	for i := range planet0 {
-		fmt.Fprintf(f, "%d %d:1 %d:1 %d:1 %d:1 %d:1\n", EagleOrTail(), planet0[i], planet1[i], planet2[i], indicator0[i], indicator1[i])
+		sig := Signum(indicator3[i] - indicator2[i])
+		fmt.Fprintf(f, "%d %d:1 %d:1 %d:1 %d:1 %d:1 %d:1 %d:1 %d:1 %d:1 %d:1\n", sig, planet0[i], planet1[i], planet2[i], position0[i], position1[i], position2[i], indicator0[i], indicator1[i], indicator2[i], indicator3[i])
 	}
 	f.Close()
 

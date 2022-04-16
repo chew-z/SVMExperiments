@@ -43,9 +43,14 @@ var (
 	location, _     = time.LoadLocation(city)
 	indicator0      [100]int
 	indicator1      [100]int
+	indicator2      [100]int
+	indicator3      [100]int
 	planet0         [100]int
 	planet1         [100]int
 	planet2         [100]int
+	position0       [100]int
+	position1       [100]int
+	position2       [100]int
 	typical         [100]float64
 	timeframe       = os.Getenv("TIMEFRAME")
 	tolerance       = int64(10800000) // 3 hours in miliseconds
@@ -82,26 +87,27 @@ func CreateData() {
 			timeseries = append(timeseries, bar[0].(float64))
 		}
 		ma0 := talib.Ma(typical[:], 10, talib.SMA)
-		// ma1 := talib.Ma(typical[:], 20, talib.SMA)
 		dx := talib.Dx(high[:], low[:], clos[:], 10)
-		// copy(indicator0[:], ma0)
-		// copy(indicator1[:], dx)
-
-		moon := IlluminationTimeseries("Moon", &timeseries)
-		mercury := IlluminationTimeseries("Mercury", &timeseries)
-		venus := IlluminationTimeseries("Venus", &timeseries)
+		aroonDown, aroonUp := talib.Aroon(high[:], low[:], 10)
+		moon := IlluminationTimeseries("Moon", timeseries)
+		mercury := IlluminationTimeseries("Mercury", timeseries)
+		venus := IlluminationTimeseries("Venus", timeseries)
+		moonPos := PositionTimeseries("Moon", timeseries)
+		mercuryPos := PositionTimeseries("Mercury", timeseries)
+		venusPos := PositionTimeseries("Venus", timeseries)
 		min, max := MinMax(ma0[10:])
 		for i, _ := range high {
+			planet0[i] = Scale(moon[i])
+			planet1[i] = Scale(mercury[i])
+			planet2[i] = Scale(venus[i])
+			position0[i] = Scale(Normalize(moonPos[i], 0.0, 360.0))
+			position1[i] = Scale(Normalize(mercuryPos[i], 0.0, 360.0))
+			position2[i] = Scale(Normalize(venusPos[i], 0.0, 360.00))
 			indicator0[i] = Scale(Normalize(typical[i], min, max))
 			indicator1[i] = Scale((Normalize(dx[i], 0.0, 100.0)))
-			planet0[i] = Scale((*moon)[i])
-			planet1[i] = Scale((*mercury)[i])
-			planet2[i] = Scale((*venus)[i])
+			indicator2[i] = Scale(Normalize(aroonDown[i], 0.0, 100.0))
+			indicator3[i] = Scale(Normalize(aroonUp[i], 0.0, 100.0))
 		}
-
-		// copy(planet0[:], (*moon))
-		// copy(planet1[:], (*mercury))
-		// copy(planet2[:], (*venus))
 	} else {
 		log.Println("Something went wrong")
 	}

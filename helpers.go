@@ -33,6 +33,14 @@ func absDiffInt64(x, y int64) int64 {
 	return x - y
 }
 
+func Signum(x int) int {
+	if x > 0 {
+		return 1
+	} else {
+		return -1
+	}
+}
+
 func EagleOrTail() int {
 	i := rand.Intn(100)
 	if i <= 50 {
